@@ -1,0 +1,104 @@
+#ifndef CONFIG_H
+#define CONFIG_H
+
+// ===================== 设备/平台参数 =====================
+#define DEVICE_ID           "34020000001320001229"
+#define CHANNEL_ID          "34020000001320001229"  // WVP通常要求一致
+
+#define PLATFORM_SIP_IP     "120.25.166.132"
+#define PLATFORM_SIP_PORT   15060
+#define PLATFORM_ID         "44010200492000000001"
+#define PLATFORM_REALM      "4401020049"
+
+// ===================== 本机参数（平台可达IP） =====================
+#define LOCAL_IP            "192.168.1.4"
+#define LOCAL_SIP_PORT      5060
+#define LOCAL_RTP_PORT      0  // 0表示随机端口
+#define SDP_IP              "0.0.0.0"   // 200OK SDP 的 o=/c= 使用；允许 0.0.0.0
+
+// ===================== RTSP源 =====================
+#define RTSP_URL            "rtsp://172.32.0.93/live/0"
+
+// ===================== SIP认证 =====================
+#define SIP_AUTH_USERNAME   DEVICE_ID
+#define SIP_AUTH_USERID     DEVICE_ID
+#define SIP_AUTH_PASSWORD   "Spepc123456"
+
+// ===================== 视频参数 =====================
+// NOTE:
+// This project repackages H.264 from RTSP into PS/RTP for GB28181 (no transcoding).
+// The *actual* transmitted resolution is determined by the RTSP source stream.
+// VIDEO_WIDTH/VIDEO_HEIGHT are mainly used for device-info reporting/logging.
+#define VIDEO_WIDTH         1920
+#define VIDEO_HEIGHT        1080
+#define VIDEO_FPS           15
+// For 1080p H.264, a typical range is ~2-6 Mbps depending on scene.
+// Used for device-info reporting only.
+#define VIDEO_BITRATE       3000000
+#define VIDEO_GOP           15
+
+// ===================== SIP/网络参数 =====================
+#define SIP_REGISTER_INTERVAL      3600
+#define SIP_KEEPALIVE_INTERVAL     20
+#define SIP_KEEPALIVE_RETRY_COUNT  3
+#define SIP_KEEPALIVE_TIMEOUT_MS   3000
+
+#define RTP_PAYLOAD_TYPE    96
+#define RTP_MAX_PACKET_SIZE 1400
+
+#define WVP_COMPATIBILITY   1
+// 0: production (quiet)  1: enable extra debug logs (only when needed)
+#define WVP_DEBUG_MODE      0
+
+// ===================== WVP 点播稳定性/诊断开关 =====================
+// RTP/PS 时间戳策略：
+// 0 = 使用 RTSP 源 pts（可能抖动/跳变，WVP 容易黑屏）
+// 1 = 固定步进 90kHz（推荐 WVP，时间戳稳定）
+// ================= WVP 时间戳模式 =================
+// 1) 推荐：MONOTONIC (默认) —— 用系统 CLOCK_MONOTONIC 推导 90kHz，适配不稳定/变帧率 RTSP 源
+// 2) 固定步进：FIXED_STEP —— 强制按 VIDEO_FPS 生成 90kHz（仅当源确实稳定在该帧率时使用）
+#ifndef WVP_TS_MODE_MONOTONIC
+#define WVP_TS_MODE_MONOTONIC  1
+#endif
+
+#ifndef WVP_TS_MODE_FIXED_STEP
+#define WVP_TS_MODE_FIXED_STEP  0
+#endif
+// 打印 BYE/INVITE 等关键信令的原始 SIP 文本（调试时很有用，默认关闭避免刷屏）
+#define WVP_DUMP_SIP_RAW        0
+
+// RTP/队列统计输出间隔（仅在 make DIAG=1 时启用）
+#define WVP_RTP_STAT_INTERVAL_MS 5000
+
+// ====== 播放稳定性策略 ======
+// 启动推流后等待 IDR 的最长时间（毫秒）。超过后仍然会发送 P 帧，避免平台因“无RTP/无数据”提前 BYE。
+#define WVP_MAX_WAIT_IDR_MS       800
+// 当 RTSP 取帧短暂中断时，重复发送最近一次 IDR 以保持链路活跃（避免链路/播放器硬阈值导致黑屏/断流）
+#define WVP_ENABLE_FILLER_IDR     1
+// 多久没取到 RTSP 帧就开始发 filler（毫秒）
+#define WVP_FILLER_IDLE_MS        300
+// filler 最短发送间隔（毫秒）
+#define WVP_FILLER_INTERVAL_MS    300
+
+#define WAIT_FOR_ACK        1
+#define ACK_TIMEOUT_MS      3000
+
+// ===================== 发送节流 =====================
+#define ENABLE_PTS_PACING         1
+#define PACING_BACKLOG_THRESHOLD  3
+
+// ===================== 内存参数 =====================
+#define PS_BUFFER_SIZE      (3 * 1024 * 1024)
+#define MAX_FRAME_QUEUE     200
+
+// ===================== 调试参数 =====================
+#ifndef ENABLE_DEBUG_LOG
+#define ENABLE_DEBUG_LOG    0
+#endif
+#define SAVE_PS_TO_FILE     0
+#define SAVE_H264_TO_FILE   0
+
+// ===================== SIP传输协议 =====================
+#define SIP_TRANSPORT_UDP   1  // 与你的测试一致：UDP
+
+#endif // CONFIG_H
