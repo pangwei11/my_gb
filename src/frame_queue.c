@@ -75,7 +75,7 @@ int frame_queue_push(FrameQueue *q, const uint8_t *data, int size, int64_t pts, 
         }
         // This frame is a keyframe: accept it and exit recovery mode
         q->drop_until_keyframe = 0;
-        drop_frame = 1;
+        drop_frame = 0;
     }
 
     FrameData *f = &q->frames[q->rear];

@@ -152,7 +152,6 @@ static void *v4l2_grab_frame(RK_U32 *len) {
 
 
 // ====================== 码流获取线程 (消费者) ======================
-// ====================== 码流获取线程 ======================
 void *venc_get_stream_thread(void *arg) {
     VENC_STREAM_S stStream;
     memset(&stStream, 0, sizeof(stStream));
@@ -208,17 +207,10 @@ void *venc_get_stream_thread(void *arg) {
                       stStream.pstPack[0].DataType.enH264EType == H264E_NALU_IDRSLICE);
 
         void *pData = RK_MPI_MB_Handle2VirAddr(stStream.pstPack[0].pMbBlk);
+        
         uint32_t data_len = stStream.pstPack[0].u32Len;
-
-        if (pData && data_len > 0) {
-            uint8_t *frame_buf = (uint8_t *)malloc(data_len);
-            if (frame_buf) {
-                memcpy(frame_buf, pData, data_len);
-                frame_queue_push(&g_frame_queue, frame_buf, data_len, pts_90k, is_key);
-                free(frame_buf); 
-            }
-        }
-
+        frame_queue_push(&g_frame_queue, pData, data_len, pts_90k, is_key);
+        
         // 正常的日志：每 10 秒打印一次（150帧）
         static int log_count = 0;
         if ((log_count++ % 150) == 0) {
@@ -232,16 +224,10 @@ void *venc_get_stream_thread(void *arg) {
 }
 
 
-
-
-
-
-
-// ====================== 原始帧发送线程 (生产者) (原封不动保留) ======================
 // ====================== 原始帧发送线程 (生产者) (保持不变) ======================
 void *venc_send_frame_thread(void *arg) {
     VENC_CTX_S *ctx = (VENC_CTX_S *)arg;
-    VIDEO_FRAME_INFO_S stFrame;     // 瑞芯微视频帧结构体（发给编码器的数据包
+    VIDEO_FRAME_INFO_S stFrame;     // 瑞芯微视频帧结构体（发给编码器的数据包)
     RK_S32 s32Ret;                  // 函数返回值
     void *pViraddr;                 // 摄像头数据的虚拟地址
     RK_U32 u32Len;                  // 摄像头一帧数据的长度
@@ -352,8 +338,6 @@ static int venc_init(VENC_CTX_S *ctx)
     attr.stRcAttr.stH264Cbr.u32BitRate = VENC_BITRATE_KBPS;     // 编码码率
     attr.stRcAttr.stH264Cbr.u32Gop = VENC_GOP_SIZE;             // GOP大小：关键帧间隔
 
-
-
     // ========== 编码基础配置 ==========
     attr.stVencAttr.enType = RK_VIDEO_ID_AVC;               //编码类型：AVC
     attr.stVencAttr.enPixelFormat = RK_FMT_YUV420SP;        //// 像素格式：YUV420SP = NV12
@@ -365,8 +349,6 @@ static int venc_init(VENC_CTX_S *ctx)
     //创建硬件编码器通道
     RK_MPI_VENC_CreateChn(VENC_CHANNEL, &attr);
 
-    
-
     memset(&recv_param, 0, sizeof(recv_param));
     recv_param.s32RecvPicNum = -1;          //// -1 = 无限接收图像（持续编码，不停止）
     RK_MPI_VENC_StartRecvFrame(VENC_CHANNEL, &recv_param);      // 启动编码器接收帧
@@ -376,9 +358,7 @@ static int venc_init(VENC_CTX_S *ctx)
 }
 
 
-
-
-// ====================== 对外接口实现 👇【拼装起来】👇 ======================
+// ====================== 对外接口实现 【拼装起来】 ======================
 int venc_local_init(void) {
     memset(&g_venc_ctx, 0, sizeof(g_venc_ctx));
     g_venc_ctx.width = VIDEO_WIDTH;

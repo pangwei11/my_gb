@@ -4,10 +4,6 @@
 #include "rtp.h"
 #include "frame_queue.h"
 
-
-
-
-
 static int hex_string_to_bytes(const char *hex_str, uint8_t *out_bytes, int max_len) {
     if (!hex_str || !out_bytes) return -1;
     
@@ -102,21 +98,6 @@ static void parse_and_execute_ptz_cmd(const char *xml_body) {
         }
     }
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 
@@ -914,6 +895,7 @@ void* sip_thread(void *arg) {
                 maybe_start_tcp_connect_after_ack();
                 break;
 
+            //CALL_CLOSED/RELEASED / CALL_MESSAGE_NEW(BYE)：处理平台挂断，包含防重传和详细的 RTP 统计日志打印
             case EXOSIP_CALL_CLOSED:
             case EXOSIP_CALL_RELEASED:
                 LOG_INFO("通话结束");
@@ -1052,16 +1034,17 @@ void* sip_thread(void *arg) {
             eXosip_event_free(ev);
         }
 
-        check_and_handle_bye_request();
-        sip_check_ack_timeout();
+        check_and_handle_bye_request();     // 兜底检查BYE请求（避免漏处理）
+        sip_check_ack_timeout();            // 检查ACK超时（若等待ACK推流，超时则处理）
 
         uint64_t now = get_timestamp_ms();
-        if (now - last_keepalive_check >= 1000) {
-            sip_check_keepalive();
-            check_registration_status();
+        if (now - last_keepalive_check >= 1000) {   //每秒钟检查一次是否需要发生心跳
+            sip_check_keepalive();                  // 心跳是20秒发一次
+            check_registration_status();            // 检查注册状态
             last_keepalive_check = now;
         }
 
+        //五秒检查一次是否注册状态
         if (now - last_reg_check >= 5000) {
             if (atomic_load(&g_registered)) {
                 uint64_t elapsed = now - g_last_reg_success_ms;
