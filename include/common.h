@@ -54,6 +54,8 @@ void log_print(const char *level, const char *fmt, ...);
 #define LOG_ERROR(fmt, ...) log_print("ERROR", fmt, ##__VA_ARGS__)
 #define LOG_DEBUG(fmt, ...) do { if (ENABLE_DEBUG_LOG) log_print("DEBUG", fmt, ##__VA_ARGS__); } while (0)
 
+int auto_detect_local_ip(char *out_ip, int out_size);
+
 void close_log_file(void);
 void ignore_sigpipe(void);
 void install_signal_handlers(void);

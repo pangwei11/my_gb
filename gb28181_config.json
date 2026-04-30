@@ -4,10 +4,10 @@
     "channel_id": "34020000001320001229",
     "password": "Spepc123456",
     "realm": "4401020049",
-    "local_ip": "192.168.0.103",
+    "local_ip": "auto",
     "local_sip_port": 5060,
     "local_rtp_port": 0,
-    "sdp_ip": "0.0.0.0"
+    "sdp_ip": "auto"
   },
   "platform": {
     "sip_ip": "120.25.166.132",
@@ -28,7 +28,7 @@
     "dump_sip_raw": false
   },
   "log": {
-    "file": "/tmp/gb28181_wvp.log",
+    "file": "/root/project/log/gb28181.log",
     "level": "info"
   }
 }

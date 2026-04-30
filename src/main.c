@@ -316,7 +316,7 @@ free(frame.data); frame.data=NULL;
 
 int main(int argc, char *argv[]) {
     state_init();
-    const char *cfg_path = "/etc/gb28181/config.json";
+    const char *cfg_path = "/root/project/config/gb28181_config.json";
     if (argc >= 2 && argv[1] && argv[1][0]) cfg_path = argv[1];
 
     LOG_INFO("========== GB28181推流程序启动 ==========");
@@ -329,6 +329,25 @@ int main(int argc, char *argv[]) {
         LOG_INFO("已加载配置: %s", cfg_path);
     } else {
         LOG_WARN("配置加载失败(%d)，使用默认编译参数。path=%s", cfg_rc, cfg_path);
+    }
+
+        // ========== 自动检测IP逻辑 ==========
+    // 如果 local_ip 配置为 "auto" 或 "0.0.0.0"，则自动获取
+    if (!strcmp(g_cfg.device.local_ip, "auto") || !strcmp(g_cfg.device.local_ip, "0.0.0.0")) {
+        char detected_ip[64] = {0};
+        if (auto_detect_local_ip(detected_ip, sizeof(detected_ip)) == 0) {
+            strncpy(g_cfg.device.local_ip, detected_ip, sizeof(g_cfg.device.local_ip) - 1);
+            LOG_INFO("local_ip 已自动设置为: %s", g_cfg.device.local_ip);
+        } else {
+            LOG_ERROR("自动检测 local_ip 失败，请检查网络连接！");
+            return -1;
+        }
+    }
+
+        // 【修复隐患】如果 sdp_ip 配置为 "0.0.0.0"、"auto" 或为空，自动等同于 local_ip
+    if (!strcmp(g_cfg.device.sdp_ip, "0.0.0.0") || !strcmp(g_cfg.device.sdp_ip, "auto") || g_cfg.device.sdp_ip[0] == '\0') {
+        strncpy(g_cfg.device.sdp_ip, g_cfg.device.local_ip, sizeof(g_cfg.device.sdp_ip) - 1);
+        LOG_INFO("sdp_ip 未明确配置，已自动同步为 local_ip: %s", g_cfg.device.sdp_ip);
     }
 
     ignore_sigpipe();                   //忽略SIGPIPE 信号

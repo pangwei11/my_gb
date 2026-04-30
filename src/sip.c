@@ -849,6 +849,12 @@ void* sip_thread(void *arg) {
     (void)arg;
     LOG_INFO("SIP线程启动");
 
+        //根据配置的传输协议（UDP/TCP），调用 eXosip 库的监听接口绑定本地 SIP 端口
+    //增加开机自启动网络未就绪时的重试机制
+    int listen_ret = -1;
+    int max_listen_retries = 30;  // 最大重试次数
+    int listen_retry_count = 0;
+
     g_exosip_ctx = eXosip_malloc();     //分配 eXosip 上下文对象（struct eXosip_t）的内存；
     if (!g_exosip_ctx) return NULL;
     if (eXosip_init(g_exosip_ctx)!=0) { osip_free(g_exosip_ctx); g_exosip_ctx=NULL; return NULL; }      //调用 eXosip_init() 初始化已分配的 eXosip 上下文
@@ -862,12 +868,30 @@ void* sip_thread(void *arg) {
     }
 
     //根据配置的传输协议（UDP/TCP），调用 eXosip 库的监听接口绑定本地 SIP 端口；若监听失败，清理资源并退出 SIP 线程
-    int listen_ret = (g_cfg.media.transport == TRANS_UDP)
-        ? eXosip_listen_addr(g_exosip_ctx, IPPROTO_UDP, g_cfg.device.local_ip, g_cfg.device.local_sip_port, AF_INET, 0)
-        : eXosip_listen_addr(g_exosip_ctx, IPPROTO_TCP, g_cfg.device.local_ip, g_cfg.device.local_sip_port, AF_INET, 0);
-    if (listen_ret!=0) {
-        LOG_ERROR("SIP监听失败 %s:%d", g_cfg.device.local_ip, g_cfg.device.local_sip_port);
-        eXosip_quit(g_exosip_ctx); osip_free(g_exosip_ctx); g_exosip_ctx=NULL;
+    while (listen_retry_count < max_listen_retries) {
+        listen_ret = (g_cfg.media.transport == TRANS_UDP)
+            ? eXosip_listen_addr(g_exosip_ctx, IPPROTO_UDP, g_cfg.device.local_ip, g_cfg.device.local_sip_port, AF_INET, 0)
+            : eXosip_listen_addr(g_exosip_ctx, IPPROTO_TCP, g_cfg.device.local_ip, g_cfg.device.local_sip_port, AF_INET, 0);
+            
+        if (listen_ret == 0) {
+            LOG_INFO("SIP监听成功 %s:%d", g_cfg.device.local_ip, g_cfg.device.local_sip_port);
+            break; // 监听成功，跳出重试循环
+        }
+        
+        listen_retry_count++;
+        LOG_WARN("SIP监听失败 %s:%d (可能网络未就绪)，第 %d/%d 次重试...", 
+                 g_cfg.device.local_ip, g_cfg.device.local_sip_port, listen_retry_count, max_listen_retries);
+                 
+        sleep(2); // 延时2秒，等待网卡获取IP
+    }
+
+    // 若达到最大重试次数仍然失败，则清理资源并退出 SIP 线程
+    if (listen_ret != 0) {
+        LOG_ERROR("SIP监听彻底失败 %s:%d (已重试%d次)，请检查网络配置", 
+                  g_cfg.device.local_ip, g_cfg.device.local_sip_port, max_listen_retries);
+        eXosip_quit(g_exosip_ctx); 
+        osip_free(g_exosip_ctx); 
+        g_exosip_ctx=NULL;
         return NULL;
     }
 

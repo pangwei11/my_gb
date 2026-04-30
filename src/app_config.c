@@ -147,7 +147,7 @@ void app_config_set_defaults(AppConfig *cfg) {
 
     //log 模块（日志配置）
     cfg->log.level = 1;                                                                     //// 日志级别默认1,对应info
-    snprintf(cfg->log.file, sizeof(cfg->log.file), "%s", "/tmp/gb28181_wvp.log");           // 日志文件路径：默认/tmp/gb28181_wvp.lo
+    snprintf(cfg->log.file, sizeof(cfg->log.file), "%s", "/root/project/log/gb28181.log");           // 日志文件路径：默认/tmp/gb28181_wvp.lo
 }
 
 int app_config_load_json(AppConfig *cfg, const char *path) {

@@ -27,7 +27,8 @@
 #include "rk_debug.h"
 
 // ====================== 核心配置 (保留) ======================
-#define V4L2_DEVICE "/dev/video23"
+//#define V4L2_DEVICE "/dev/video23"
+#define V4L2_DEVICE "/dev/video46"
 // 注意：这里建议用宏读取 GB28181 的 config.h，或者直接写死
 #define VIDEO_WIDTH 1920
 #define VIDEO_HEIGHT 1080
